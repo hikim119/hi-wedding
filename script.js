@@ -39,12 +39,11 @@
   function loadImagesFromFolder(folder, maxAttempts = 50) {
     const BATCH = 8;  // 한 번에 병렬로 확인할 이미지 수
 
-    const check = (path) => new Promise(res => {
-      const img = new Image();
-      img.onload = () => res(true);
-      img.onerror = () => res(false);
-      img.src = path;
-    });
+    // HEAD 요청으로 "존재 여부"만 확인 → 본문(사진)은 받지 않음.
+    // 실제 사진은 화면에 들어올 때 loading="lazy"로 받으므로 초기 로딩이 가벼움.
+    const check = (path) => fetch(path, { method: 'HEAD' })
+      .then(r => r.ok)
+      .catch(() => false);
 
     return (async () => {
       const images = [];
@@ -127,6 +126,8 @@
     const el = typeof container === 'string' ? $(container) : container;
     if (!el) return;
 
+    // DocumentFragment에 모아 한 번만 DOM에 추가 (리플로우 최소화)
+    const frag = document.createDocumentFragment();
     for (let i = 0; i < count; i++) {
       const star = document.createElement('span');
       star.className = 'star';
@@ -147,8 +148,9 @@
         star.classList.add('star--gold');
       }
 
-      el.appendChild(star);
+      frag.appendChild(star);
     }
+    el.appendChild(frag);
   }
 
   /* ═══════════════════════════════════════════
@@ -243,19 +245,25 @@
 
   function initCountdown() {
     const target = getWeddingDateTime();
+    // 요소를 한 번만 조회해서 재사용 (매 초 DOM 재조회 방지)
+    const labelEl = $('#countdownLabel');
+    const dEl = $('#countDays');
+    const hEl = $('#countHours');
+    const mEl = $('#countMinutes');
+    const sEl = $('#countSeconds');
+
+    let timerId = null;
 
     function update() {
-      const now = new Date();
-      const diff = target - now;
-
-      const labelEl = $('#countdownLabel');
+      const diff = target - Date.now();
 
       if (diff <= 0) {
-        $('#countDays').textContent = '0';
-        $('#countHours').textContent = '0';
-        $('#countMinutes').textContent = '0';
-        $('#countSeconds').textContent = '0';
+        dEl.textContent = '0';
+        hEl.textContent = '0';
+        mEl.textContent = '0';
+        sEl.textContent = '0';
         labelEl.textContent = '결혼식이 시작되었습니다';
+        if (timerId) clearInterval(timerId);  // 끝나면 타이머 정지
         return;
       }
 
@@ -267,14 +275,14 @@
       const minutes = Math.floor((diff / (1000 * 60)) % 60);
       const seconds = Math.floor((diff / 1000) % 60);
 
-      $('#countDays').textContent = days;
-      $('#countHours').textContent = String(hours).padStart(2, '0');
-      $('#countMinutes').textContent = String(minutes).padStart(2, '0');
-      $('#countSeconds').textContent = String(seconds).padStart(2, '0');
+      dEl.textContent = days;
+      hEl.textContent = String(hours).padStart(2, '0');
+      mEl.textContent = String(minutes).padStart(2, '0');
+      sEl.textContent = String(seconds).padStart(2, '0');
     }
 
     update();
-    setInterval(update, 1000);
+    timerId = setInterval(update, 1000);
   }
 
   /* ═══════════════════════════════════════════
