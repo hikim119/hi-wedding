@@ -16,6 +16,13 @@ const CONFIG = {
   // ── 초대장 열기 ──
   useCurtain: false,  // 초대장 열기 화면 사용 여부 (true: 사용, false: 바로 본문 표시)
 
+  // ── 배경음악 ──
+  music: {
+    enabled: true,           // 배경음악 사용 여부
+    src: "images/bgm.mp3",   // 음악 파일 경로
+    autoplay: true           // 첫 화면 터치 시 자동 재생 (브라우저 정책상 터치 전엔 재생 불가)
+  },
+
   // ── 메인 (히어로) ──
   groom: {
     name: "문성현",

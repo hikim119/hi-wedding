@@ -666,6 +666,49 @@ a {
   background-color: var(--color-bg-alt);
 }
 
+/* ─── Background Music Toggle ─── */
+.music-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 200;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: rgba(10, 22, 40, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--color-accent);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.music-toggle:hover {
+  background: rgba(10, 22, 40, 0.8);
+}
+
+.music-toggle:active {
+  transform: scale(0.92);
+}
+
+.music-toggle__on { display: none; }
+.music-toggle__off { display: block; }
+.music-toggle.is-playing .music-toggle__on { display: block; }
+.music-toggle.is-playing .music-toggle__off { display: none; }
+
+/* 재생 중일 때 은은한 회전 애니메이션 */
+.music-toggle.is-playing .music-toggle__on {
+  animation: music-spin 4s linear infinite;
+}
+
+@keyframes music-spin {
+  to { transform: rotate(360deg); }
+}
+
 .calendar__datetime {
   text-align: center;
   font-size: 1.0625rem;

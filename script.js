@@ -37,34 +37,32 @@
      ═══════════════════════════════════════════ */
 
   function loadImagesFromFolder(folder, maxAttempts = 50) {
-    return new Promise(resolve => {
-        const images = [];
-        let current = 1;
-        let consecutiveFails = 0;
+    const BATCH = 8;  // 한 번에 병렬로 확인할 이미지 수
 
-        function tryNext() {
-            if (current > maxAttempts || consecutiveFails >= 3) {
-                resolve(images);
-                return;
-            }
-            const img = new Image();
-            const path = `images/${folder}/${current}.jpg`;
-            img.onload = function() {
-                images.push(path);
-                consecutiveFails = 0;
-                current++;
-                tryNext();
-            };
-            img.onerror = function() {
-                consecutiveFails++;
-                current++;
-                tryNext();
-            };
-            img.src = path;
-        }
-
-        tryNext();
+    const check = (path) => new Promise(res => {
+      const img = new Image();
+      img.onload = () => res(true);
+      img.onerror = () => res(false);
+      img.src = path;
     });
+
+    return (async () => {
+      const images = [];
+      // 파일명은 1.jpg, 2.jpg ... 연속이므로 batch 단위로 병렬 확인하고 첫 공백에서 멈춤
+      for (let start = 1; start <= maxAttempts; start += BATCH) {
+        const batch = [];
+        for (let i = start; i < start + BATCH && i <= maxAttempts; i++) {
+          const path = `images/${folder}/${i}.jpg`;
+          batch.push(check(path).then(ok => (ok ? path : null)));
+        }
+        const results = await Promise.all(batch);
+        const gap = results.indexOf(null);
+        const usable = gap === -1 ? results : results.slice(0, gap);
+        images.push(...usable);
+        if (gap !== -1) break;  // 연속이 끊기면 종료
+      }
+      return images;
+    })();
   }
 
   /* ═══════════════════════════════════════════
@@ -184,6 +182,46 @@
     });
 
     document.body.classList.add('no-scroll');
+  }
+
+  /* ═══════════════════════════════════════════
+     Background Music
+     ═══════════════════════════════════════════ */
+
+  function initMusic() {
+    const cfg = CONFIG.music || {};
+    const audio = $('#bgm');
+    const toggle = $('#musicToggle');
+    if (!cfg.enabled || !audio || !toggle) return;
+
+    audio.src = cfg.src;
+    audio.volume = 0.5;
+    toggle.hidden = false;
+
+    const updateIcon = () => toggle.classList.toggle('is-playing', !audio.paused);
+
+    const play = () => audio.play().then(updateIcon).catch(() => {});
+    const pause = () => { audio.pause(); updateIcon(); };
+
+    // Toggle button
+    toggle.addEventListener('click', () => {
+      audio.paused ? play() : pause();
+    });
+
+    // Autoplay on first user interaction (browser policy blocks sound before any gesture)
+    if (cfg.autoplay !== false) {
+      const startOnce = () => {
+        play();
+        document.removeEventListener('pointerdown', startOnce);
+        document.removeEventListener('touchstart', startOnce);
+        document.removeEventListener('keydown', startOnce);
+      };
+      document.addEventListener('pointerdown', startOnce);
+      document.addEventListener('touchstart', startOnce);
+      document.addEventListener('keydown', startOnce);
+    }
+
+    updateIcon();
   }
 
   /* ═══════════════════════════════════════════
@@ -377,7 +415,7 @@
       const div = document.createElement('div');
       div.className = 'story__photo-item animate-item';
       div.setAttribute('data-animate', 'fade-up');
-      div.innerHTML = `<img src="${src}" alt="스토리 사진 ${i + 1}" loading="lazy">`;
+      div.innerHTML = `<img src="${src}" alt="스토리 사진 ${i + 1}" loading="lazy" decoding="async">`;
       div.addEventListener('click', () => openPhotoModal(storyImages, i));
       container.appendChild(div);
     });
@@ -404,7 +442,7 @@
       const div = document.createElement('div');
       div.className = 'gallery__item animate-item';
       div.setAttribute('data-animate', 'scale-in');
-      div.innerHTML = `<img src="${src}" alt="갤러리 사진 ${i + 1}" loading="lazy">`;
+      div.innerHTML = `<img src="${src}" alt="갤러리 사진 ${i + 1}" loading="lazy" decoding="async">`;
       div.addEventListener('click', () => openPhotoModal(galleryImages, i));
       grid.appendChild(div);
     });
@@ -651,6 +689,7 @@
   async function init() {
     setMetaTags();
     initCurtain();
+    initMusic();
     initHero();
     initCountdown();
     initGreeting();
