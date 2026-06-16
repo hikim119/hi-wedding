@@ -454,10 +454,38 @@
 
   let modalImages = [];
   let modalIndex = 0;
-  let touchStartX = 0;
-  let touchEndX = 0;
-  let touchStartY = 0;
-  let touchEndY = 0;
+
+  // 확대/이동 상태
+  let zoomScale = 1;
+  let zoomTx = 0;
+  let zoomTy = 0;
+  const MAX_ZOOM = 4;
+
+  function applyZoom() {
+    const img = $('#modalImg');
+    if (img) img.style.transform = `translate(${zoomTx}px, ${zoomTy}px) scale(${zoomScale})`;
+  }
+
+  function clampPan() {
+    const img = $('#modalImg');
+    const container = $('#modalContainer');
+    if (!img || !container) return;
+    const maxX = Math.max(0, (img.clientWidth * zoomScale - container.clientWidth) / 2);
+    const maxY = Math.max(0, (img.clientHeight * zoomScale - container.clientHeight) / 2);
+    zoomTx = Math.min(maxX, Math.max(-maxX, zoomTx));
+    zoomTy = Math.min(maxY, Math.max(-maxY, zoomTy));
+  }
+
+  function resetZoom() {
+    zoomScale = 1;
+    zoomTx = 0;
+    zoomTy = 0;
+    const img = $('#modalImg');
+    if (img) {
+      img.style.transition = 'transform 0.3s ease';
+      applyZoom();
+    }
+  }
 
   function openPhotoModal(images, index) {
     modalImages = images;
@@ -470,10 +498,12 @@
   function closePhotoModal() {
     $('#photoModal').classList.remove('is-open');
     document.body.classList.remove('no-scroll');
+    resetZoom();
   }
 
   function showModalImage() {
     const img = $('#modalImg');
+    resetZoom();
     img.src = modalImages[modalIndex];
     $('#modalCounter').textContent = `${modalIndex + 1} / ${modalImages.length}`;
 
@@ -496,6 +526,7 @@
 
     const modal = $('#photoModal');
     modal.addEventListener('click', (e) => {
+      if (zoomScale > 1) return;  // 확대 중에는 배경 탭으로 닫지 않음
       if (e.target === modal || e.target.id === 'modalContainer') {
         closePhotoModal();
       }
@@ -509,33 +540,115 @@
       if (e.key === 'ArrowRight') modalNavigate(1);
     });
 
-    // Swipe support
     const container = $('#modalContainer');
+    const img = $('#modalImg');
+
+    const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    let mode = null;          // 'pinch' | 'pan' | 'tap'
+    let startDist = 0, startScale = 1;
+    let panStartX = 0, panStartY = 0, startTx = 0, startTy = 0;
+    let tapStartX = 0, tapStartY = 0;
+    let lastTap = 0;
 
     container.addEventListener('touchstart', (e) => {
-      touchStartX = e.changedTouches[0].screenX;
-      touchStartY = e.changedTouches[0].screenY;
-    }, { passive: true });
+      if (e.touches.length === 2) {
+        mode = 'pinch';
+        startDist = dist(e.touches[0], e.touches[1]);
+        startScale = zoomScale;
+        img.style.transition = 'none';
+      } else if (e.touches.length === 1) {
+        const t = e.touches[0];
+        if (zoomScale > 1) {
+          mode = 'pan';
+          panStartX = t.clientX; panStartY = t.clientY;
+          startTx = zoomTx; startTy = zoomTy;
+          img.style.transition = 'none';
+        } else {
+          mode = 'tap';
+          tapStartX = t.clientX; tapStartY = t.clientY;
+        }
+      }
+    }, { passive: false });
+
+    container.addEventListener('touchmove', (e) => {
+      if (mode === 'pinch' && e.touches.length === 2) {
+        e.preventDefault();
+        const d = dist(e.touches[0], e.touches[1]);
+        zoomScale = Math.min(MAX_ZOOM, Math.max(1, startScale * (d / startDist)));
+        clampPan();
+        applyZoom();
+      } else if (mode === 'pan' && e.touches.length === 1) {
+        e.preventDefault();
+        const t = e.touches[0];
+        zoomTx = startTx + (t.clientX - panStartX);
+        zoomTy = startTy + (t.clientY - panStartY);
+        clampPan();
+        applyZoom();
+      }
+    }, { passive: false });
 
     container.addEventListener('touchend', (e) => {
-      touchEndX = e.changedTouches[0].screenX;
-      touchEndY = e.changedTouches[0].screenY;
-      handleSwipe();
-    }, { passive: true });
-  }
+      if (mode === 'pinch') {
+        img.style.transition = 'transform 0.2s ease';
+        if (zoomScale <= 1.05) resetZoom();
+        else { clampPan(); applyZoom(); }
+        mode = null;
+        return;
+      }
+      if (mode === 'pan') {
+        img.style.transition = 'transform 0.2s ease';
+        mode = null;
+        return;
+      }
+      if (mode === 'tap') {
+        const t = e.changedTouches[0];
+        const dx = tapStartX - t.clientX;
+        const dy = tapStartY - t.clientY;
+        const moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
+        if (moved) {
+          // 스와이프로 사진 넘기기 (확대 안 된 상태에서만)
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+            modalNavigate(dx > 0 ? 1 : -1);
+          }
+        } else {
+          // 더블탭 확대/축소
+          const now = e.timeStamp;
+          if (now - lastTap < 300) {
+            img.style.transition = 'transform 0.25s ease';
+            if (zoomScale > 1) {
+              resetZoom();
+            } else {
+              zoomScale = 2.5;
+              clampPan();
+              applyZoom();
+            }
+            lastTap = 0;
+          } else {
+            lastTap = now;
+          }
+        }
+        mode = null;
+      }
+    }, { passive: false });
 
-  function handleSwipe() {
-    const diffX = touchStartX - touchEndX;
-    const diffY = touchStartY - touchEndY;
-    const minSwipe = 50;
+    // 데스크톱: 휠로 확대/축소, 더블클릭 토글
+    container.addEventListener('wheel', (e) => {
+      if (!modal.classList.contains('is-open')) return;
+      e.preventDefault();
+      img.style.transition = 'none';
+      zoomScale = Math.min(MAX_ZOOM, Math.max(1, zoomScale - e.deltaY * 0.002));
+      if (zoomScale <= 1) { resetZoom(); return; }
+      clampPan();
+      applyZoom();
+    }, { passive: false });
 
-    if (Math.abs(diffX) < minSwipe || Math.abs(diffX) < Math.abs(diffY)) return;
-
-    if (diffX > 0) {
-      modalNavigate(1); // swipe left -> next
-    } else {
-      modalNavigate(-1); // swipe right -> prev
-    }
+    img.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      img.style.transition = 'transform 0.25s ease';
+      if (zoomScale > 1) resetZoom();
+      else { zoomScale = 2.5; clampPan(); applyZoom(); }
+    });
   }
 
   /* ═══════════════════════════════════════════
