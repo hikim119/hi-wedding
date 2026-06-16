@@ -466,7 +466,7 @@ a {
 .hero {
   position: relative;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;  /* 스크롤로 주소창이 숨겨져도 크기가 변하지 않도록 고정 */
   display: flex;
   flex-direction: column;
   align-items: center;
