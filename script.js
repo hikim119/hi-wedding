@@ -550,12 +550,33 @@
     let panStartX = 0, panStartY = 0, startTx = 0, startTy = 0;
     let tapStartX = 0, tapStartY = 0;
     let lastTap = 0;
+    let ccx = 0, ccy = 0;       // 컨테이너 중심 (화면 좌표)
+    let anchorX = 0, anchorY = 0; // 손가락 초점의 이미지 기준 위치
+
+    // 화면 좌표 → 이미지 기준 좌표(중심 기준, 스케일 보정)
+    const setAnchor = (sx, sy) => {
+      const rect = container.getBoundingClientRect();
+      ccx = rect.left + rect.width / 2;
+      ccy = rect.top + rect.height / 2;
+      anchorX = (sx - ccx - zoomTx) / zoomScale;
+      anchorY = (sy - ccy - zoomTy) / zoomScale;
+    };
+
+    // 초점(화면 좌표)이 같은 이미지 지점 위에 머물도록 translate 보정
+    const zoomToFocus = (fx, fy) => {
+      zoomTx = (fx - ccx) - anchorX * zoomScale;
+      zoomTy = (fy - ccy) - anchorY * zoomScale;
+    };
 
     container.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         mode = 'pinch';
         startDist = dist(e.touches[0], e.touches[1]);
         startScale = zoomScale;
+        setAnchor(
+          (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          (e.touches[0].clientY + e.touches[1].clientY) / 2
+        );
         img.style.transition = 'none';
       } else if (e.touches.length === 1) {
         const t = e.touches[0];
@@ -576,6 +597,11 @@
         e.preventDefault();
         const d = dist(e.touches[0], e.touches[1]);
         zoomScale = Math.min(MAX_ZOOM, Math.max(1, startScale * (d / startDist)));
+        // 손가락 중심점을 따라가며 그 지점 기준으로 확대
+        zoomToFocus(
+          (e.touches[0].clientX + e.touches[1].clientX) / 2,
+          (e.touches[0].clientY + e.touches[1].clientY) / 2
+        );
         clampPan();
         applyZoom();
       } else if (mode === 'pan' && e.touches.length === 1) {
@@ -619,7 +645,10 @@
             if (zoomScale > 1) {
               resetZoom();
             } else {
+              // 탭한 지점 기준으로 확대
+              setAnchor(t.clientX, t.clientY);
               zoomScale = 2.5;
+              zoomToFocus(t.clientX, t.clientY);
               clampPan();
               applyZoom();
             }
@@ -637,8 +666,10 @@
       if (!modal.classList.contains('is-open')) return;
       e.preventDefault();
       img.style.transition = 'none';
+      setAnchor(e.clientX, e.clientY);
       zoomScale = Math.min(MAX_ZOOM, Math.max(1, zoomScale - e.deltaY * 0.002));
       if (zoomScale <= 1) { resetZoom(); return; }
+      zoomToFocus(e.clientX, e.clientY);  // 커서 위치 기준 확대
       clampPan();
       applyZoom();
     }, { passive: false });
@@ -646,8 +677,15 @@
     img.addEventListener('dblclick', (e) => {
       e.preventDefault();
       img.style.transition = 'transform 0.25s ease';
-      if (zoomScale > 1) resetZoom();
-      else { zoomScale = 2.5; clampPan(); applyZoom(); }
+      if (zoomScale > 1) {
+        resetZoom();
+      } else {
+        setAnchor(e.clientX, e.clientY);
+        zoomScale = 2.5;
+        zoomToFocus(e.clientX, e.clientY);  // 클릭 위치 기준 확대
+        clampPan();
+        applyZoom();
+      }
     });
   }
 
