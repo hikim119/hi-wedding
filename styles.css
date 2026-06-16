@@ -541,7 +541,7 @@ a {
 
 .hero__date,
 .hero__venue {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 300;
   letter-spacing: 2px;
   opacity: 0.8;
@@ -664,6 +664,15 @@ a {
    ═══════════════════════════════════════════ */
 .calendar-section {
   background-color: var(--color-bg-alt);
+}
+
+.calendar__datetime {
+  text-align: center;
+  font-size: 1.0625rem;
+  font-weight: 300;
+  letter-spacing: 1.5px;
+  color: var(--color-silver);
+  margin: 0 auto var(--spacing-md);
 }
 
 .calendar {
