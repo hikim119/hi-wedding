@@ -410,6 +410,7 @@ a {
   transform-origin: center center;
   transition: transform 0.3s ease;
   will-change: transform;
+  touch-action: none;  /* 이미지 위에서 시작한 핀치를 브라우저 페이지 줌이 가로채지 않도록 */
 }
 
 .photo-modal__counter {
