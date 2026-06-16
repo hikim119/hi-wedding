@@ -734,7 +734,7 @@
             ${acc.bank} ${acc.number}
           </div>
         </div>
-        <button class="account-item__copy" data-account="${acc.bank} ${acc.number} ${acc.name || ''}">
+        <button class="account-item__copy" data-account="${acc.number}">
           복사
         </button>
       `;
@@ -769,7 +769,7 @@
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.account-item__copy');
       if (!btn) return;
-      const text = btn.dataset.account;
+      const text = btn.dataset.account.replace(/\D/g, '');  // 하이픈 등 제거, 숫자만 복사
       copyToClipboard(text, '계좌번호가 복사되었습니다');
     });
   }
