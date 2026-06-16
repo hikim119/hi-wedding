@@ -198,7 +198,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg);
+  background: transparent;  /* 패널이 열리면 뒤의 hero 사진이 자연스럽게 드러남 */
 }
 
 .curtain__stars {
