@@ -462,6 +462,7 @@
 
   let modalImages = [];
   let modalIndex = 0;
+  let savedScrollY = 0;   // 모달 열기 전 스크롤 위치 (닫을 때 복원)
 
   // 확대/이동 상태
   let zoomScale = 1;
@@ -500,12 +501,23 @@
     modalIndex = index;
     showModalImage();
     $('#photoModal').classList.add('is-open');
+    // body 가 position:fixed 로 바뀌면 스크롤이 0 으로 초기화되므로
+    // 현재 위치를 저장하고 그만큼 body 를 끌어올려 화면을 고정한다
+    savedScrollY = window.scrollY;
+    document.body.style.top = `-${savedScrollY}px`;
     document.body.classList.add('no-scroll');
   }
 
   function closePhotoModal() {
     $('#photoModal').classList.remove('is-open');
     document.body.classList.remove('no-scroll');
+    document.body.style.top = '';
+    // scroll-behavior:smooth 를 잠시 꺼서 복원이 애니메이션 없이 즉시 되게
+    const html = document.documentElement;
+    const prevBehavior = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo(0, savedScrollY);
+    html.style.scrollBehavior = prevBehavior;
     resetZoom();
   }
 
