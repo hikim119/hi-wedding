@@ -569,7 +569,6 @@
     let startDist = 0, startScale = 1;
     let panStartX = 0, panStartY = 0, startTx = 0, startTy = 0;
     let tapStartX = 0, tapStartY = 0;
-    let lastTap = 0;
     let ccx = 0, ccy = 0;       // 컨테이너 중심 (화면 좌표)
     let anchorX = 0, anchorY = 0; // 손가락 초점의 이미지 기준 위치
 
@@ -648,40 +647,19 @@
         return;
       }
       if (mode === 'tap') {
+        // 스와이프로 사진 넘기기 (확대 안 된 상태에서만)
+        // 더블탭 확대는 두지 않는다. 확대는 핀치로만.
         const t = e.changedTouches[0];
         const dx = tapStartX - t.clientX;
         const dy = tapStartY - t.clientY;
-        const moved = Math.abs(dx) > 10 || Math.abs(dy) > 10;
-        if (moved) {
-          // 스와이프로 사진 넘기기 (확대 안 된 상태에서만)
-          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-            modalNavigate(dx > 0 ? 1 : -1);
-          }
-        } else {
-          // 더블탭 확대/축소
-          const now = e.timeStamp;
-          if (now - lastTap < 300) {
-            img.style.transition = 'transform 0.25s ease';
-            if (zoomScale > 1) {
-              resetZoom();
-            } else {
-              // 탭한 지점 기준으로 확대
-              setAnchor(t.clientX, t.clientY);
-              zoomScale = 2.5;
-              zoomToFocus(t.clientX, t.clientY);
-              clampPan();
-              applyZoom();
-            }
-            lastTap = 0;
-          } else {
-            lastTap = now;
-          }
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+          modalNavigate(dx > 0 ? 1 : -1);
         }
         mode = null;
       }
     }, { passive: false });
 
-    // 데스크톱: 휠로 확대/축소, 더블클릭 토글
+    // 데스크톱: 휠로 확대/축소
     container.addEventListener('wheel', (e) => {
       if (!modal.classList.contains('is-open')) return;
       e.preventDefault();
@@ -693,20 +671,6 @@
       clampPan();
       applyZoom();
     }, { passive: false });
-
-    img.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      img.style.transition = 'transform 0.25s ease';
-      if (zoomScale > 1) {
-        resetZoom();
-      } else {
-        setAnchor(e.clientX, e.clientY);
-        zoomScale = 2.5;
-        zoomToFocus(e.clientX, e.clientY);  // 클릭 위치 기준 확대
-        clampPan();
-        applyZoom();
-      }
-    });
   }
 
   /* ═══════════════════════════════════════════
