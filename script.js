@@ -527,16 +527,18 @@
     img.src = modalImages[modalIndex];
     $('#modalCounter').textContent = `${modalIndex + 1} / ${modalImages.length}`;
 
-    $('#modalPrev').style.display = modalIndex > 0 ? '' : 'none';
-    $('#modalNext').style.display = modalIndex < modalImages.length - 1 ? '' : 'none';
+    // 순환하므로 사진이 2장 이상이면 양쪽 화살표를 항상 보인다
+    const showNav = modalImages.length > 1 ? '' : 'none';
+    $('#modalPrev').style.display = showNav;
+    $('#modalNext').style.display = showNav;
   }
 
   function modalNavigate(dir) {
-    const newIndex = modalIndex + dir;
-    if (newIndex >= 0 && newIndex < modalImages.length) {
-      modalIndex = newIndex;
-      showModalImage();
-    }
+    const n = modalImages.length;
+    if (n < 2) return;
+    // 순환: 맨 끝에서 다음은 맨 앞으로, 맨 앞에서 이전은 맨 끝으로
+    modalIndex = (modalIndex + dir + n) % n;
+    showModalImage();
   }
 
   function initPhotoModal() {
