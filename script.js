@@ -542,9 +542,31 @@
   }
 
   function initPhotoModal() {
-    $('#modalClose').addEventListener('click', closePhotoModal);
-    $('#modalPrev').addEventListener('click', () => modalNavigate(-1));
-    $('#modalNext').addEventListener('click', () => modalNavigate(1));
+    // 버튼은 touchend 에서 직접 실행하고 기본 동작을 막는다.
+    // 연타 때 브라우저가 "더블탭"으로 보고 페이지를 확대하는 것을 CSS(touch-action)와 별개로 한 번 더 차단.
+    // 터치 뒤 click 은 합성되지 않지만, 혹시 되더라도 두 번 실행되지 않게 시각으로 거른다.
+    let lastTouchEnd = 0;
+    const bindTap = (el, fn) => {
+      let sx = 0, sy = 0;
+      el.addEventListener('touchstart', (e) => {
+        sx = e.changedTouches[0].clientX;
+        sy = e.changedTouches[0].clientY;
+      }, { passive: true });
+      el.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        lastTouchEnd = e.timeStamp;
+        const t = e.changedTouches[0];
+        // 버튼 위에서 끌고 지나간 경우(스와이프)는 무시
+        if (Math.abs(t.clientX - sx) < 15 && Math.abs(t.clientY - sy) < 15) fn();
+      }, { passive: false });
+      el.addEventListener('click', (e) => {   // 마우스·키보드
+        if (e.timeStamp - lastTouchEnd < 500) return;
+        fn();
+      });
+    };
+    bindTap($('#modalClose'), closePhotoModal);
+    bindTap($('#modalPrev'), () => modalNavigate(-1));
+    bindTap($('#modalNext'), () => modalNavigate(1));
 
     const modal = $('#photoModal');
     // 배경(프레임) 탭으로는 닫지 않는다. 닫기는 X 버튼(데스크톱은 Esc 도)만.
