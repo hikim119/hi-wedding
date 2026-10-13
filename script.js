@@ -547,12 +547,7 @@
     $('#modalNext').addEventListener('click', () => modalNavigate(1));
 
     const modal = $('#photoModal');
-    modal.addEventListener('click', (e) => {
-      if (zoomScale > 1) return;  // 확대 중에는 배경 탭으로 닫지 않음
-      if (e.target === modal || e.target.id === 'modalContainer') {
-        closePhotoModal();
-      }
-    });
+    // 배경(프레임) 탭으로는 닫지 않는다. 닫기는 X 버튼(데스크톱은 Esc 도)만.
 
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
