@@ -347,17 +347,18 @@ a {
 
 .photo-modal__close {
   position: absolute;
-  top: calc(1rem + var(--safe-top));
-  right: calc(1rem + var(--safe-right));
+  top: calc(10px + var(--safe-top));
+  right: calc(10px + var(--safe-right));
   color: var(--color-white);
   font-size: 2rem;
-  width: 44px;
-  height: 44px;
+  width: 56px;   /* 터치 범위 (글리프 위치는 44px 때와 동일) */
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2;
   opacity: 0.8;
+  -webkit-tap-highlight-color: transparent;
   transition: opacity var(--transition);
 }
 
@@ -371,13 +372,16 @@ a {
   transform: translateY(-50%);
   color: var(--color-white);
   font-size: 2.5rem;
-  width: 48px;
-  height: 48px;
+  /* 터치 범위: 글리프는 그대로 두고 버튼만 좌우 64px x 세로 화면 절반으로 키움 */
+  width: 64px;
+  height: 50%;
+  min-height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2;
   opacity: 0.7;
+  -webkit-tap-highlight-color: transparent;
   transition: opacity var(--transition);
 }
 
@@ -386,11 +390,11 @@ a {
 }
 
 .photo-modal__nav--prev {
-  left: calc(0.5rem + var(--safe-left));
+  left: var(--safe-left);
 }
 
 .photo-modal__nav--next {
-  right: calc(0.5rem + var(--safe-right));
+  right: var(--safe-right);
 }
 
 .photo-modal__container {
